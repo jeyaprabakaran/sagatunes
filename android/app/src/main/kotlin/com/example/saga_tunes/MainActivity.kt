@@ -1,28 +1,45 @@
 package com.example.saga_tunes
 
+import android.content.Intent
 import android.media.MediaScannerConnection
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import kotlin.system.exitProcess
 
-class MainActivity: AudioServiceActivity() {
+class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.sagatunes.app/media_scanner"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "scanFile") {
-                val path = call.argument<String>("path")
-                if (path != null) {
-                    MediaScannerConnection.scanFile(this, arrayOf(path), null) { _, uri ->
-                        result.success(uri?.toString())
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+            .setMethodCallHandler { call, result ->
+                if (call.method == "scanFile") {
+                    val path = call.argument<String>("path")
+                    if (path != null) {
+                        MediaScannerConnection.scanFile(
+                            this, arrayOf(path), null
+                        ) { _, uri -> result.success(uri?.toString()) }
+                    } else {
+                        result.error("INVALID_PATH", "Path cannot be null", null)
                     }
                 } else {
-                    result.error("INVALID_PATH", "Path cannot be null", null)
+                    result.notImplemented()
                 }
-            } else {
-                result.notImplemented()
             }
+    }
+
+    // This is called when user swipes app from recents
+    // Override from Activity (parent of AudioServiceActivity)
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            val serviceIntent = Intent(this,
+                Class.forName("com.ryanheise.audioservice.AudioService"))
+            stopService(serviceIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+        exitProcess(0)
     }
 }
