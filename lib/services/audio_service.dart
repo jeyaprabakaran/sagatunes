@@ -20,13 +20,14 @@ class AudioService {
   Future<void> initBackgroundService() async {
     _audioHandler = await bg_audio.AudioService.init(
       builder: () => SagaTunesAudioHandler(_player),
-    config: const bg_audio.AudioServiceConfig(
-      androidNotificationChannelId: 'com.sagatunes.app.channel.audio',
-      androidNotificationChannelName: 'Audio playback',
-      androidNotificationOngoing: false,
-      androidShowNotificationBadge: false,
-      androidStopForegroundOnPause: true,
-    ),
+      config: const bg_audio.AudioServiceConfig(
+        androidNotificationChannelId: 'com.sagatunes.app.channel.audio',
+        androidNotificationChannelName: 'Audio playback',
+        androidNotificationOngoing: false,
+        androidShowNotificationBadge: false,
+        androidStopForegroundOnPause: true,
+        androidNotificationClickStartsActivity: true,
+      ),
     );
   }
 
@@ -305,36 +306,35 @@ class SagaTunesAudioHandler extends bg_audio.BaseAudioHandler
   SagaTunesAudioHandler(this._player) {
     _player.playbackEventStream.listen((event) {
       final playing = _player.playing;
-      playbackState.add(
-        playbackState.value.copyWith(
-          controls: [
-            bg_audio.MediaControl.skipToPrevious,
-            if (playing)
-              bg_audio.MediaControl.pause
-            else
-              bg_audio.MediaControl.play,
-            bg_audio.MediaControl.skipToNext,
-          ],
-          systemActions: const {
-            bg_audio.MediaAction.seek,
-            bg_audio.MediaAction.seekForward,
-            bg_audio.MediaAction.seekBackward,
-          },
-          androidCompactActionIndices: const [0, 1, 2],
-          processingState: const {
-            ProcessingState.idle: bg_audio.AudioProcessingState.idle,
-            ProcessingState.loading: bg_audio.AudioProcessingState.loading,
-            ProcessingState.buffering: bg_audio.AudioProcessingState.buffering,
-            ProcessingState.ready: bg_audio.AudioProcessingState.ready,
-            ProcessingState.completed: bg_audio.AudioProcessingState.completed,
-          }[_player.processingState]!,
-          playing: playing,
-          updatePosition: _player.position,
-          bufferedPosition: _player.bufferedPosition,
-          speed: _player.speed,
-          queueIndex: event.currentIndex,
-        ),
-      );
+      playbackState.add(playbackState.value.copyWith(
+        controls: [
+          bg_audio.MediaControl.skipToPrevious,
+          if (playing)
+            bg_audio.MediaControl.pause
+          else
+            bg_audio.MediaControl.play,
+          bg_audio.MediaControl.skipToNext,
+          bg_audio.MediaControl.stop,
+        ],
+        systemActions: const {
+          bg_audio.MediaAction.seek,
+          bg_audio.MediaAction.seekForward,
+          bg_audio.MediaAction.seekBackward,
+        },
+        androidCompactActionIndices: const [0, 1, 2],
+        processingState: const {
+          ProcessingState.idle: bg_audio.AudioProcessingState.idle,
+          ProcessingState.loading: bg_audio.AudioProcessingState.loading,
+          ProcessingState.buffering: bg_audio.AudioProcessingState.buffering,
+          ProcessingState.ready: bg_audio.AudioProcessingState.ready,
+          ProcessingState.completed: bg_audio.AudioProcessingState.completed,
+        }[_player.processingState]!,
+        playing: playing,
+        updatePosition: _player.position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+        queueIndex: event.currentIndex,
+      ));
     });
   }
 
@@ -347,27 +347,17 @@ class SagaTunesAudioHandler extends bg_audio.BaseAudioHandler
   @override
   Future<void> stop() async {
     await _player.stop();
-    playbackState.add(
-      playbackState.value.copyWith(
-        processingState: bg_audio.AudioProcessingState.idle,
-        playing: false,
-      ),
-    );
+    playbackState.add(playbackState.value.copyWith(
+      processingState: bg_audio.AudioProcessingState.idle,
+      playing: false,
+    ));
     mediaItem.add(null);
     await super.stop();
   }
 
   @override
   Future<void> onTaskRemoved() async {
-    await _player.stop();
-    playbackState.add(
-      playbackState.value.copyWith(
-        processingState: bg_audio.AudioProcessingState.idle,
-        playing: false,
-      ),
-    );
-    mediaItem.add(null);
-    await super.stop();
+    await stop();
   }
 
   @override

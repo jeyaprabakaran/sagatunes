@@ -1,11 +1,9 @@
 package com.example.saga_tunes
 
-import android.content.Intent
 import android.media.MediaScannerConnection
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import kotlin.system.exitProcess
 
 class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.sagatunes.app/media_scanner"
@@ -27,19 +25,5 @@ class MainActivity : AudioServiceActivity() {
                     result.notImplemented()
                 }
             }
-    }
-
-    // This is called when user swipes app from recents
-    // Override from Activity (parent of AudioServiceActivity)
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            val serviceIntent = Intent(this,
-                Class.forName("com.ryanheise.audioservice.AudioService"))
-            stopService(serviceIntent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        exitProcess(0)
     }
 }
