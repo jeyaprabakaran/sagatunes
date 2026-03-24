@@ -1,0 +1,5 @@
+﻿Analyzing saga_tunes...                                         
+
+  error - The method 'getDownloads' isn't defined for the type 'StorageService' - lib\screens\library_screen.dart:35:44 - undefined_method
+  error - The named parameter 'aspectRatio' isn't defined - lib\screens\player_screen.dart:111:7 - undefined_named_parameter
+
