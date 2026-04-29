@@ -262,18 +262,7 @@ class AudioService {
         }
       }
 
-      if (!kIsWeb && _audioHandler != null) {
-        _audioHandler!.mediaItem.add(
-          bg_audio.MediaItem(
-            id: song.id,
-            album: song.albumName.isNotEmpty ? song.albumName : 'Saga Tunes',
-            title: song.name,
-            artist: song.artistName,
-            duration: Duration(seconds: song.duration),
-            artUri: Uri.parse(song.imageUrl),
-          ),
-        );
-      }
+
 
       if (!kIsWeb && localPath != null) {
         await _player.setFilePath(localPath);
