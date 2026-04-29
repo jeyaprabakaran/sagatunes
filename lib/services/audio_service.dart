@@ -357,7 +357,22 @@ class SagaTunesAudioHandler extends bg_audio.BaseAudioHandler
 
   @override
   Future<void> onTaskRemoved() async {
-    await stop();
+    // 1. Instantly tell Android to kill the foreground service and notification!
+    await super.stop(); 
+    
+    // 2. Clear the media item so the OS Media Resumption doesn't cache it
+    mediaItem.add(null);
+    
+    // 3. Update the state to idle
+    playbackState.add(
+      playbackState.value.copyWith(
+        processingState: bg_audio.AudioProcessingState.idle,
+        playing: false,
+      ),
+    );
+    
+    // 4. Stop the actual audio player last
+    await _player.stop();
   }
 
   @override

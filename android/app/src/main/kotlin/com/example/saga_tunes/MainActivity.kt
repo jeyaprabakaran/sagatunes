@@ -1,12 +1,19 @@
 package com.example.saga_tunes
 
+import android.content.Intent
 import android.media.MediaScannerConnection
+import android.os.Bundle
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.sagatunes.app/media_scanner"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        startService(Intent(this, TaskTrackerService::class.java))
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
