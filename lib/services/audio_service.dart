@@ -217,7 +217,22 @@ class AudioService {
   Future<void> stop() async {
     _saveTimer?.cancel();
     await _player.stop();
+    
     if (_audioHandler != null) {
+      // Clear media item FIRST to prevent MIUI from reviving the notification
+      _audioHandler!.mediaItem.add(null);
+      
+      // Force playback state to idle with empty controls
+      _audioHandler!.playbackState.add(
+        _audioHandler!.playbackState.value.copyWith(
+          processingState: bg_audio.AudioProcessingState.idle,
+          playing: false,
+          controls: [],
+          systemActions: {},
+        ),
+      );
+      
+      // Then call handler stop
       await _audioHandler!.stop();
     }
   }
@@ -347,32 +362,40 @@ class SagaTunesAudioHandler extends bg_audio.BaseAudioHandler
   @override
   Future<void> stop() async {
     await _player.stop();
+    
+    // Explicitly clear everything before calling super.stop()
+    // This prevents MIUI from caching and reviving the notification
     playbackState.add(playbackState.value.copyWith(
       processingState: bg_audio.AudioProcessingState.idle,
       playing: false,
+      controls: [],
+      systemActions: {},
     ));
+    
     mediaItem.add(null);
+    
+    // Small delay to ensure state propagates to native side before cleanup
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     await super.stop();
   }
 
   @override
   Future<void> onTaskRemoved() async {
-    // 1. Instantly tell Android to kill the foreground service and notification!
-    await super.stop(); 
+    // Aggressive cleanup when app is swiped away from recents
+    await _player.stop();
     
-    // 2. Clear the media item so the OS Media Resumption doesn't cache it
+    playbackState.add(playbackState.value.copyWith(
+      processingState: bg_audio.AudioProcessingState.idle,
+      playing: false,
+      controls: [],
+      systemActions: {},
+    ));
+    
     mediaItem.add(null);
     
-    // 3. Update the state to idle
-    playbackState.add(
-      playbackState.value.copyWith(
-        processingState: bg_audio.AudioProcessingState.idle,
-        playing: false,
-      ),
-    );
-    
-    // 4. Stop the actual audio player last
-    await _player.stop();
+    await Future.delayed(const Duration(milliseconds: 100));
+    await super.stop();
   }
 
   @override

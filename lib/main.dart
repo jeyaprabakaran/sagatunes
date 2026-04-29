@@ -67,8 +67,14 @@ class _SagaTunesAppState extends State<SagaTunesApp> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.detached) {
-      AudioService.instance.stop();
+    // Only handle paused state to save position
+    // DO NOT stop on detached - let audio_service handle app kill via onTaskRemoved
+    if (state == AppLifecycleState.paused) {
+      if (AudioService.instance.currentSong != null) {
+        StorageService.saveLastPosition(
+          AudioService.instance.position.inSeconds,
+        );
+      }
     }
   }
 
