@@ -611,7 +611,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return GestureDetector(
       onTap: () {
         // FIX 7: navigate to album page instead of playing directly
-        Navigator.pushNamed(context, '/album', arguments: {
+        Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
           'albumId': album.id,
           'albumName': album.name,
           'artistName': album.artistName,

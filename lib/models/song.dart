@@ -9,6 +9,7 @@ class Song {
   final int duration;
   final String language;
   final String albumName;
+  final String albumId;
   
   bool isDownloaded;
   bool isLiked;
@@ -22,6 +23,7 @@ class Song {
     required this.duration,
     required this.language,
     this.albumName = '',
+    this.albumId = '',
     this.isDownloaded = false,
     this.isLiked = false,
   });
@@ -64,6 +66,7 @@ class Song {
       duration: int.tryParse(json['duration']?.toString() ?? '0') ?? 0,
       language: json['language'] ?? 'Unknown',
       albumName: decodeHtml(json['album']?['name'] ?? ''),
+      albumId: json['album']?['id']?.toString() ?? '',
     );
   }
 
@@ -93,6 +96,7 @@ class SongAdapter extends TypeAdapter<Song> {
       duration: reader.readInt(),
       language: reader.readString(),
       albumName: reader.readString(),
+      albumId: reader.readString(),
     );
   }
 
@@ -106,5 +110,6 @@ class SongAdapter extends TypeAdapter<Song> {
     writer.writeInt(obj.duration);
     writer.writeString(obj.language);
     writer.writeString(obj.albumName);
+    writer.writeString(obj.albumId);
   }
 }

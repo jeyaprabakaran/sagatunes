@@ -283,7 +283,7 @@ class SongThreeDots extends StatelessWidget {
       if (!context.mounted) return;
       if (albums.isNotEmpty) {
         final album = albums.first;
-        Navigator.pushNamed(context, '/album', arguments: {
+        Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
           'albumId': album.id,
           'albumName': album.name,
           'artistName': album.artistName,

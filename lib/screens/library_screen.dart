@@ -58,7 +58,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _playSelection(List<Song> songs, int index) {
     if (songs.isNotEmpty) {
       _player.playSong(songs[index], songs, index);
-      Navigator.pushNamed(context, '/player');
+      Navigator.of(context, rootNavigator: true).pushNamed('/player');
     }
   }
 
@@ -281,7 +281,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     if (playlist.songs.isEmpty) return;
                     _player.playSong(
                         playlist.songs[0], playlist.songs, 0);
-                    Navigator.pushNamed(context, '/player');
+                    Navigator.of(context, rootNavigator: true).pushNamed('/player');
                   },
                   icon: const Icon(Icons.play_arrow,
                       color: Color(0xFFE8C547), size: 18),
@@ -394,7 +394,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               onTap: () {
                 _player.playSong(
                     song, playlist.songs, playlist.songs.indexOf(song));
-                Navigator.pushNamed(context, '/player');
+                Navigator.of(context, rootNavigator: true).pushNamed('/player');
               },
             )),
         ],
@@ -817,7 +817,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               color: Color(0xFF7A7890), size: 20),
         ],
       ),
-      onTap: () => Navigator.pushNamed(context, '/album', arguments: {
+      onTap: () => Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
         'albumId': album.id,
         'albumName': album.name,
         'artistName': album.artistName,

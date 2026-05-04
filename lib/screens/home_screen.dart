@@ -183,9 +183,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeroSlide(Song song) {
     return GestureDetector(
       onTap: () {
-        _player.playSong(song, _heroSongs, 
-          _heroSongs.indexOf(song));
-        Navigator.pushNamed(context, '/player');
+        if (song.albumId.isNotEmpty) {
+          Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
+            'albumId': song.albumId,
+            'albumName': song.albumName,
+            'artistName': song.artistName,
+            'imageUrl': song.imageUrl.replaceAll('150x150', '500x500'),
+            'year': ''
+          });
+        } else {
+          _player.playSong(song, _heroSongs, 
+            _heroSongs.indexOf(song));
+          Navigator.of(context, rootNavigator: true).pushNamed('/player');
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 18),
@@ -305,7 +315,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTrackRow(Song song, int index) {
     return GestureDetector(
-      onTap: () => _playSong(song, index),
+      onTap: () {
+        if (song.albumId.isNotEmpty) {
+          Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
+            'albumId': song.albumId,
+            'albumName': song.albumName,
+            'artistName': song.artistName,
+            'imageUrl': song.imageUrl.replaceAll('150x150', '500x500'),
+            'year': ''
+          });
+        } else {
+          _playSong(song, index);
+        }
+      },
       child: Container(
         height: 72,
         padding: const EdgeInsets.symmetric(horizontal: 16),
