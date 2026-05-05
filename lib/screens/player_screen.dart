@@ -18,6 +18,8 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   final AudioService _player = AudioService();
   final JioSaavnService _api = JioSaavnService();
+  bool _isDragging = false;
+  double _dragValue = 0.0;
 
   // FIX 2 — Add to Playlist sheet
   void _showAddToPlaylistSheet() {
@@ -648,32 +650,48 @@ class _PlayerScreenState extends State<PlayerScreen> {
           final msPos = pos.inMilliseconds.toDouble();
           final msTotal = total.inMilliseconds.toDouble();
           final validTotal = msTotal > 0 ? msTotal : 100.0;
-          final validPos = msPos.clamp(0.0, validTotal);
+          final validPos = _isDragging ? _dragValue : msPos.clamp(0.0, validTotal);
 
           return Column(
             children: [
               SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   trackHeight: 4,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 0),
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                   activeTrackColor: const Color(0xFFE8C547),
                   inactiveTrackColor: const Color(0xFF2E2E45),
+                  thumbColor: const Color(0xFFE8C547),
                   trackShape: const RectangularSliderTrackShape(),
                 ),
                 child: Slider(
                   min: 0,
                   max: validTotal,
-                  value: validPos,
-                  onChanged: (val) =>
-                    _player.seekTo(Duration(milliseconds: val.toInt())),
+                  value: validPos.clamp(0.0, validTotal),
+                  onChangeStart: (val) {
+                    setState(() {
+                      _isDragging = true;
+                      _dragValue = val;
+                    });
+                  },
+                  onChanged: (val) {
+                    setState(() {
+                      _dragValue = val;
+                    });
+                  },
+                  onChangeEnd: (val) {
+                    _player.seekTo(Duration(milliseconds: val.toInt()));
+                    setState(() {
+                      _isDragging = false;
+                    });
+                  },
                 ),
               ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_formatDuration(pos.inSeconds),
+                  Text(_formatDuration(_isDragging ? (_dragValue / 1000).floor() : pos.inSeconds),
                     style: GoogleFonts.dmSans(fontSize: 12,
                       color: const Color(0xFF7A7890))),
                   Text(_formatDuration(total.inSeconds),

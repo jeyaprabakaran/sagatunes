@@ -115,6 +115,14 @@ class AudioService {
     }
   }
 
+  void insertNext(Song song) {
+    if (_queue.isEmpty && _currentSong == null) {
+      playSong(song, [song], 0);
+    } else {
+      _queue.insert(_currentIndex + 1, song);
+    }
+  }
+
   Future<void> playSong(Song song, List<Song> queue, int index) async {
     // Prevent overlapping load requests
     if (_isLoading) {

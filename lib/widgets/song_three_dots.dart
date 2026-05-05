@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/song.dart';
 import '../services/storage_service.dart';
 import '../services/jiosaavn_service.dart';
+import '../services/audio_service.dart';
 
 class SongThreeDots extends StatelessWidget {
   final Song song;
@@ -25,6 +26,24 @@ class SongThreeDots extends StatelessWidget {
         switch (value) {
           case 'add_playlist':
             _showAddToPlaylistSheet(context);
+            break;
+          case 'play_next':
+            AudioService.instance.insertNext(song);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Playing next: ${song.name}'),
+                backgroundColor: const Color(0xFF1E1E2E),
+                duration: const Duration(seconds: 2)));
+            }
+            break;
+          case 'add_to_queue':
+            AudioService.instance.addToQueue([song]);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Added to queue: ${song.name}'),
+                backgroundColor: const Color(0xFF1E1E2E),
+                duration: const Duration(seconds: 2)));
+            }
             break;
           case 'share':
             final shareText = '🎵 "${song.name}" by ${song.artistName}\n'
@@ -53,6 +72,8 @@ class SongThreeDots extends StatelessWidget {
         }
       },
       itemBuilder: (ctx) => [
+        _menuItem('play_next', Icons.skip_next, 'Play Next'),
+        _menuItem('add_to_queue', Icons.queue_music, 'Add to Queue'),
         _menuItem('add_playlist', Icons.playlist_add, 'Add to Playlist'),
         _menuItem('share', Icons.share_outlined, 'Share'),
         _menuItem('song_info', Icons.info_outline, 'Song Info'),
