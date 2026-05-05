@@ -80,6 +80,7 @@ class _AppRouterState extends State<AppRouter> {
     setState(() => _selectedIndex = index);
     AppRouter.tabController.value = index;
   }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -100,6 +101,25 @@ class _AppRouterState extends State<AppRouter> {
             Navigator(
               key: _navigatorKey,
               initialRoute: '/home_tab',
+              observers: [
+                _TabNavigatorObserver((routeName) {
+                  int index = 0;
+                  if (routeName == '/search') {
+                    index = 1;
+                  } else if (routeName == '/library') {
+                    index = 3;
+                  }
+                  
+                  if (_selectedIndex != index) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() => _selectedIndex = index);
+                        AppRouter.tabController.value = index;
+                      }
+                    });
+                  }
+                }),
+              ],
               onGenerateRoute: (settings) {
                 Widget page;
                 switch (settings.name) {
@@ -310,5 +330,23 @@ class _AppRouterState extends State<AppRouter> {
         ),
       ),
     );
+  }
+}
+
+class _TabNavigatorObserver extends NavigatorObserver {
+  final void Function(String?) onRouteChanged;
+  
+  _TabNavigatorObserver(this.onRouteChanged);
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    onRouteChanged(route.settings.name);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    onRouteChanged(previousRoute?.settings.name);
   }
 }

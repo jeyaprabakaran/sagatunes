@@ -262,6 +262,16 @@ class StorageService {
     }
   }
 
+  static Future<void> addSongsToPlaylist(String playlistId, List<Song> songs) async {
+    final box = Hive.box<Playlist>(_playlistsBox);
+    final playlist = box.get(playlistId);
+    if (playlist != null) {
+      final updatedSongs = List<Song>.from(playlist.songs)..addAll(songs);
+      await box.put(
+          playlistId, Playlist(id: playlist.id, name: playlist.name, songs: updatedSongs));
+    }
+  }
+
   static Future<void> removeSongFromPlaylist(
       String playlistId, String songId) async {
     final box = Hive.box<Playlist>(_playlistsBox);

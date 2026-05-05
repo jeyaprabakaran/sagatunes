@@ -316,17 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTrackRow(Song song, int index) {
     return GestureDetector(
       onTap: () {
-        if (song.albumId.isNotEmpty) {
-          Navigator.of(context, rootNavigator: true).pushNamed('/album', arguments: {
-            'albumId': song.albumId,
-            'albumName': song.albumName,
-            'artistName': song.artistName,
-            'imageUrl': song.imageUrl.replaceAll('150x150', '500x500'),
-            'year': ''
-          });
-        } else {
-          _playSong(song, index);
-        }
+        _playSong(song, index);
       },
       child: Container(
         height: 72,
