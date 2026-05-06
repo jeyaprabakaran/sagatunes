@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
+
+// Internal imports - keeping these as per your structure
 import '../screens/home_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/library_screen.dart';
@@ -8,7 +11,6 @@ import '../screens/album_screen.dart';
 import '../services/audio_service.dart';
 import '../models/song.dart';
 import '../widgets/mini_player.dart';
-import 'package:flutter/services.dart';
 
 class AppRouter extends StatefulWidget {
   const AppRouter({super.key});
@@ -31,9 +33,8 @@ class AppRouter extends StatefulWidget {
         );
       default:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(child: Text('Route not found')),
-          ),
+          builder: (_) =>
+              const Scaffold(body: Center(child: Text('Route not found'))),
         );
     }
   }
@@ -45,9 +46,20 @@ class AppRouter extends StatefulWidget {
 class _AppRouterState extends State<AppRouter> {
   final AudioService _audioService = AudioService();
 
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  // List of keys for each tab's Navigator
+  final List<GlobalKey<NavigatorState>> _tabNavKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+  ];
+
   int _selectedIndex = 0;
-  int _previousIndex = 0; // to restore after returning from PlayerScreen
+  int _previousIndex = 0;
+  DateTime? _lastBackPressed;
+
+  // Maps the 4 bottom nav items to the 3 actual screens in the IndexedStack
+  // (0: Home, 1: Search, 2: Player/Modal, 3: Library)
+  int get _stackIndex => _selectedIndex == 3 ? 2 : _selectedIndex;
 
   @override
   void initState() {
@@ -66,19 +78,63 @@ class _AppRouterState extends State<AppRouter> {
   }
 
   void _switchTab(int index) {
-    if (_selectedIndex == index) return;
-    
-    String routeName = '/home_tab';
-    if (index == 1) {
-      routeName = '/search';
-    } else if (index == 3) {
-      routeName = '/library';
+    if (_selectedIndex == index) {
+      // Tap same tab → pop to root of that specific tab's navigator
+      final stackIdx = index == 3 ? 2 : index;
+      _tabNavKeys[stackIdx].currentState?.popUntil((r) => r.isFirst);
+      return;
     }
-    
-    _navigatorKey.currentState?.pushNamed(routeName);
-    
+
+    // FIX: When leaving Search (Index 1), replace its GlobalKey.
+    // This forces the Navigator to dispose, clearing the SearchScreen state.
+    if (_selectedIndex == 1) {
+      _tabNavKeys[1] = GlobalKey<NavigatorState>();
+    }
+
     setState(() => _selectedIndex = index);
     AppRouter.tabController.value = index;
+  }
+
+  Future<bool> _onWillPop() async {
+    final currentNav = _tabNavKeys[_stackIndex].currentState;
+
+    // 1. Try to pop the internal tab navigator first
+    if (currentNav != null && currentNav.canPop()) {
+      currentNav.pop();
+      return false;
+    }
+
+    // 2. If at the root of a tab, but not Home, go back to Home
+    if (_selectedIndex != 0) {
+      _switchTab(
+        0,
+      ); // This triggers the search reset logic if coming from Search
+      return false;
+    }
+
+    // 3. Double-tap to exit logic for the Home tab
+    final now = DateTime.now();
+    if (_lastBackPressed == null ||
+        now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+      _lastBackPressed = now;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Press back again to exit'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return false;
+    }
+    return true;
+  }
+
+  Widget _buildTabNavigator(int stackIndex, Widget screen) {
+    return Navigator(
+      key: _tabNavKeys[stackIndex],
+      onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => screen),
+    );
   }
 
   @override
@@ -87,10 +143,8 @@ class _AppRouterState extends State<AppRouter> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        final nav = _navigatorKey.currentState;
-        if (nav != null && nav.canPop()) {
-          nav.pop();
-        } else {
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
           await SystemNavigator.pop();
         }
       },
@@ -98,43 +152,15 @@ class _AppRouterState extends State<AppRouter> {
         backgroundColor: const Color(0xFF0A0A0F),
         body: Stack(
           children: [
-            Navigator(
-              key: _navigatorKey,
-              initialRoute: '/home_tab',
-              observers: [
-                _TabNavigatorObserver((routeName) {
-                  int index = 0;
-                  if (routeName == '/search') {
-                    index = 1;
-                  } else if (routeName == '/library') {
-                    index = 3;
-                  }
-                  
-                  if (_selectedIndex != index) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() => _selectedIndex = index);
-                        AppRouter.tabController.value = index;
-                      }
-                    });
-                  }
-                }),
+            IndexedStack(
+              index: _stackIndex,
+              children: [
+                _buildTabNavigator(0, const HomeScreen()),
+                _buildTabNavigator(1, const SearchScreen()),
+                _buildTabNavigator(2, const LibraryScreen()),
               ],
-              onGenerateRoute: (settings) {
-                Widget page;
-                switch (settings.name) {
-                  case '/home_tab': page = const HomeScreen(); break;
-                  case '/search': page = const SearchScreen(); break;
-                  case '/library': page = const LibraryScreen(); break;
-                  default: page = const SizedBox.shrink();
-                }
-                return MaterialPageRoute(builder: (_) => page);
-              },
             ),
-            const Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: MiniPlayer(),
-            ),
+            const Positioned(left: 0, right: 0, bottom: 0, child: MiniPlayer()),
           ],
         ),
         bottomNavigationBar: _buildBottomNav(context),
@@ -151,7 +177,6 @@ class _AppRouterState extends State<AppRouter> {
       ),
       child: Row(
         children: [
-          // 0 — Home
           _navItem(
             icon: Icons.home_outlined,
             activeIcon: Icons.home,
@@ -159,8 +184,6 @@ class _AppRouterState extends State<AppRouter> {
             index: 0,
             onTap: () => _switchTab(0),
           ),
-
-          // 1 — Search
           _navItem(
             icon: Icons.search,
             activeIcon: Icons.search,
@@ -169,7 +192,7 @@ class _AppRouterState extends State<AppRouter> {
             onTap: () => _switchTab(1),
           ),
 
-          // Center — Gold circle: play/pause ONLY, NO navigation
+          // Central Play/Pause Button
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -198,8 +221,9 @@ class _AppRouterState extends State<AppRouter> {
                             color: const Color(0xFFE8C547),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFE8C547)
-                                    .withValues(alpha: 0.25),
+                                color: const Color(
+                                  0xFFE8C547,
+                                ).withValues(alpha: 0.25),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -212,14 +236,15 @@ class _AppRouterState extends State<AppRouter> {
                                 ClipOval(
                                   child: CachedNetworkImage(
                                     imageUrl: song.imageUrl,
-                                    width: 52, height: 52,
+                                    width: 52,
+                                    height: 52,
                                     fit: BoxFit.cover,
-                                    errorWidget: (c, u, e) =>
-                                        const SizedBox(),
+                                    errorWidget: (c, u, e) => const SizedBox(),
                                   ),
                                 ),
                               Container(
-                                width: 52, height: 52,
+                                width: 52,
+                                height: 52,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.black.withValues(alpha: 0.3),
@@ -241,7 +266,7 @@ class _AppRouterState extends State<AppRouter> {
             ),
           ),
 
-          // 2 — Now Playing: headphones icon → navigates to /player
+          // Now Playing Tab (Opens full-screen player)
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -249,7 +274,10 @@ class _AppRouterState extends State<AppRouter> {
                 if (_selectedIndex != 2) _previousIndex = _selectedIndex;
                 setState(() => _selectedIndex = 2);
                 AppRouter.tabController.value = 2;
-                Navigator.of(context, rootNavigator: true).pushNamed('/player').then((_) {
+                Navigator.of(
+                  context,
+                  rootNavigator: true,
+                ).pushNamed('/player').then((_) {
                   if (mounted) {
                     setState(() => _selectedIndex = _previousIndex);
                     AppRouter.tabController.value = _previousIndex;
@@ -281,7 +309,6 @@ class _AppRouterState extends State<AppRouter> {
             ),
           ),
 
-          // 3 — Library
           _navItem(
             icon: Icons.library_music_outlined,
             activeIcon: Icons.library_music,
@@ -330,23 +357,5 @@ class _AppRouterState extends State<AppRouter> {
         ),
       ),
     );
-  }
-}
-
-class _TabNavigatorObserver extends NavigatorObserver {
-  final void Function(String?) onRouteChanged;
-  
-  _TabNavigatorObserver(this.onRouteChanged);
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPush(route, previousRoute);
-    onRouteChanged(route.settings.name);
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    super.didPop(route, previousRoute);
-    onRouteChanged(previousRoute?.settings.name);
   }
 }
